@@ -1,20 +1,14 @@
 <?php
 declare(strict_types=1);
-/**
- * Copyright © ict. All rights reserved.
- * https://ict.lv/
- */
 
 namespace ICT\Klar\Model\Builders;
 
-use ICT\Klar\Api\Data\TaxInterface;
 use ICT\Klar\Api\Data\TaxInterfaceFactory;
-use ICT\Klar\Model\AbstractApiRequestParamsBuilder;
 use Magento\Framework\Intl\DateTimeFactory;
 use Magento\Sales\Api\Data\OrderItemInterface;
 use Magento\Sales\Model\ResourceModel\Order\Tax\Item as TaxItemResource;
 
-class TaxesBuilder extends AbstractApiRequestParamsBuilder
+class TaxesBuilder extends \ICT\Klar\Model\Builders\TaxesBuilder
 {
     public const TAXABLE_ITEM_TYPE_PRODUCT = 'product';
     public const TAXABLE_ITEM_TYPE_SHIPPING = 'shipping';
@@ -34,7 +28,7 @@ class TaxesBuilder extends AbstractApiRequestParamsBuilder
         TaxItemResource $taxItemResource,
         TaxInterfaceFactory $taxFactory
     ) {
-        parent::__construct($dateTimeFactory);
+        parent::__construct($dateTimeFactory, $taxItemResource, $taxFactory);
         $this->taxItemResource = $taxItemResource;
         $this->taxFactory = $taxFactory;
     }
@@ -68,14 +62,13 @@ class TaxesBuilder extends AbstractApiRequestParamsBuilder
                 }
 
                 $qty = $salesOrderItem->getQtyOrdered() ? $salesOrderItem->getQtyOrdered() : 1;
-                $itemPrice = (float)$salesOrderItem->getPriceInclTax() - ((float)$salesOrderItem->getDiscountAmount() / $qty);
+                $itemPrice = (float)$salesOrderItem->getOriginalPrice() - ((float)$salesOrderItem->getDiscountAmount() / $qty);
                 $taxAmount = $itemPrice - ($itemPrice / (1+ $taxRate));
             } else {
                 $taxAmount = (float)$taxItem['real_amount'];
             }
 
             if ($taxItem['taxable_item_type'] === $taxableItemType) {
-                /* @var TaxInterface $tax */
                 $tax = $this->taxFactory->create();
 
                 $tax->setTitle($taxItem['title']);

@@ -1,16 +1,12 @@
 <?php
 declare(strict_types=1);
-/**
- * Copyright © ict. All rights reserved.
- * https://ict.lv/
- */
 
 namespace ICT\Klar\Model\Builders;
 
-use ICT\Klar\Api\Data\LineItemInterface;
 use ICT\Klar\Api\Data\LineItemInterfaceFactory;
 use ICT\Klar\Helper\Config;
-use ICT\Klar\Model\AbstractApiRequestParamsBuilder;
+use ICT\Klar\Model\Builders\LineItemDiscountsBuilder;
+use ICT\Klar\Model\Builders\TaxesBuilder;
 use Magento\Catalog\Api\CategoryRepositoryInterface;
 use Magento\Catalog\Model\Product;
 use Magento\Framework\Exception\NoSuchEntityException;
@@ -18,7 +14,7 @@ use Magento\Framework\Intl\DateTimeFactory;
 use Magento\Sales\Api\Data\OrderInterface as SalesOrderInterface;
 use Magento\Sales\Api\Data\OrderItemInterface as SalesOrderItemInterface;
 
-class LineItemsBuilder extends AbstractApiRequestParamsBuilder
+class LineItemsBuilder extends \ICT\Klar\Model\Builders\LineItemsBuilder
 {
     private LineItemInterfaceFactory $lineItemFactory;
     private CategoryRepositoryInterface $categoryRepository;
@@ -27,8 +23,6 @@ class LineItemsBuilder extends AbstractApiRequestParamsBuilder
     private LineItemDiscountsBuilder $discountsBuilder;
 
     /**
-     * LineItemsBuilder constructor.
-     *
      * @param DateTimeFactory $dateTimeFactory
      * @param LineItemInterfaceFactory $lineItemFactory
      * @param CategoryRepositoryInterface $categoryRepository
@@ -44,7 +38,15 @@ class LineItemsBuilder extends AbstractApiRequestParamsBuilder
         Config $config,
         LineItemDiscountsBuilder $discountsBuilder
     ) {
-        parent::__construct($dateTimeFactory);
+        parent::__construct(
+            $dateTimeFactory,
+            $lineItemFactory,
+            $categoryRepository,
+            $taxesBuilder,
+            $config,
+            $discountsBuilder
+        );
+
         $this->lineItemFactory = $lineItemFactory;
         $this->categoryRepository = $categoryRepository;
         $this->taxesBuilder = $taxesBuilder;
@@ -66,19 +68,26 @@ class LineItemsBuilder extends AbstractApiRequestParamsBuilder
         foreach ($salesOrder->getItems() as $salesOrderItem) {
             $product = $salesOrderItem->getProduct();
             $productVariant = $this->getProductVariant($salesOrderItem);
-            $productBrand = false;
             $categoryName = $this->getCategoryName($salesOrderItem);
-            $totalBeforeTaxesAndDiscounts = $salesOrderItem->getOriginalPrice() * $salesOrderItem->getQtyOrdered();
-            $weightInGrams = 0;
 
+            $discountAmount = (float)$salesOrderItem->getDiscountAmount();
+            $taxAmount = (float)$salesOrderItem->getTaxAmount();
+            $priceInclTax = (float)$salesOrderItem->getOriginalPrice();
+            $quantity = (int)$salesOrderItem->getQtyOrdered();
+
+            if ((float)$salesOrderItem->getPriceInclTax() == 0.0) {
+                $discountAmount = $priceInclTax * $quantity;
+            }
+
+            $totalBeforeTaxesAndDiscounts = $priceInclTax * $quantity;
+            $totalAfterTaxesAndDiscounts = $totalBeforeTaxesAndDiscounts - $taxAmount - $discountAmount;
+
+            $weightInGrams = 0;
             if ($product) {
-                $productBrand = $product->getAttributeText('manufacturer');
                 $weightInGrams = $this->getWeightInGrams($product);
             }
 
-            /* @var LineItemInterface $lineItem */
             $lineItem = $this->lineItemFactory->create();
-
             $lineItem->setId((string)$salesOrderItem->getItemId());
             $lineItem->setProductName($salesOrderItem->getName());
             $lineItem->setProductId((string)$salesOrderItem->getProductId());
@@ -88,27 +97,21 @@ class LineItemsBuilder extends AbstractApiRequestParamsBuilder
                 $lineItem->setProductVariantId((string)$productVariant['id']);
             }
 
-            if ($productBrand) {
-                $lineItem->setProductBrand($productBrand);
-            }
-
             if ($categoryName) {
                 $lineItem->setProductCollection($categoryName);
             }
 
             $lineItem->setProductCogs((float)$salesOrderItem->getBaseCost());
-            $lineItem->setProductGmv((float)$salesOrderItem->getOriginalPrice());
+            $lineItem->setProductGmv($priceInclTax);
             $lineItem->setProductShippingWeightInGrams($weightInGrams);
             $lineItem->setSku($salesOrderItem->getSku());
-            $lineItem->setQuantity((float)$salesOrderItem->getQtyOrdered());
+            $lineItem->setQuantity($quantity);
             $lineItem->setDiscounts($this->discountsBuilder->buildFromSalesOrderItem($salesOrderItem));
             $lineItem->setTaxes(
                 $this->taxesBuilder->build((int)$salesOrderItem->getOrderId(), $salesOrderItem)
             );
             $lineItem->setTotalAmountBeforeTaxesAndDiscounts($totalBeforeTaxesAndDiscounts);
-
-            $totalAfterTaxesAndDiscounts = $this->calculateTotalAfterTaxesAndDiscounts($lineItem);
-            $lineItem->setTotalAmountAfterTaxesAndDiscounts($totalAfterTaxesAndDiscounts ?: 0.0);
+            $lineItem->setTotalAmountAfterTaxesAndDiscounts($totalAfterTaxesAndDiscounts);
 
             $lineItems[] = $this->snakeToCamel($lineItem->toArray());
         }
@@ -121,9 +124,9 @@ class LineItemsBuilder extends AbstractApiRequestParamsBuilder
      *
      * @param SalesOrderItemInterface $salesOrderItem
      *
-     * @return array|false
+     * @return array|null
      */
-    private function getProductVariant(SalesOrderItemInterface $salesOrderItem)
+    private function getProductVariant(SalesOrderItemInterface $salesOrderItem): ?array
     {
         $productOptions = $salesOrderItem->getProductOptions();
 
@@ -134,7 +137,7 @@ class LineItemsBuilder extends AbstractApiRequestParamsBuilder
             ];
         }
 
-        return false;
+        return null;
     }
 
     /**
@@ -214,30 +217,5 @@ class LineItemsBuilder extends AbstractApiRequestParamsBuilder
         $weightInKgs = $weightLbs * $conversionFactor;
 
         return round($weightInKgs, 3);
-    }
-
-    /**
-     * Calculate line item total after taxes and discounts.
-     *
-     * @param LineItemInterface $lineItem
-     *
-     * @return float
-     */
-    private function calculateTotalAfterTaxesAndDiscounts(LineItemInterface $lineItem): float
-    {
-        $taxAmount = 0;
-        $discountAmount = 0;
-        $quantity = $lineItem->getQuantity();
-        $productGmv = $lineItem->getProductGmv() * $quantity;
-
-        foreach ($lineItem->getTaxes() as $lineItemTax) {
-            $taxAmount += $lineItemTax['taxAmount'] * $quantity;
-        }
-
-        foreach ($lineItem->getDiscounts() as $lineItemDiscount) {
-            $discountAmount += $lineItemDiscount['discountAmount'] * $quantity;
-        }
-
-        return $productGmv - $taxAmount - $discountAmount;
     }
 }

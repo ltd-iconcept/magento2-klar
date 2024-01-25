@@ -1,15 +1,10 @@
 <?php
 declare(strict_types=1);
-/**
- * Copyright © ict. All rights reserved.
- * https://ict.lv/
- */
 
 namespace ICT\Klar\Model\Builders;
 
 use ICT\Klar\Api\Data\DiscountInterface;
 use ICT\Klar\Api\Data\DiscountInterfaceFactory;
-use ICT\Klar\Model\AbstractApiRequestParamsBuilder;
 use Magento\Framework\Exception\LocalizedException;
 use Magento\Framework\Exception\NoSuchEntityException;
 use Magento\Framework\Intl\DateTimeFactory;
@@ -18,7 +13,7 @@ use Magento\SalesRule\Api\Data\RuleInterface;
 use Magento\SalesRule\Api\RuleRepositoryInterface;
 use Magento\SalesRule\Model\RuleFactory;
 
-class LineItemDiscountsBuilder extends AbstractApiRequestParamsBuilder
+class LineItemDiscountsBuilder extends \ICT\Klar\Model\Builders\LineItemDiscountsBuilder
 {
     private DiscountInterfaceFactory $discountFactory;
     private RuleRepositoryInterface $salesRuleRepository;
@@ -38,7 +33,7 @@ class LineItemDiscountsBuilder extends AbstractApiRequestParamsBuilder
         RuleRepositoryInterface $salesRuleRepository,
         RuleFactory $ruleFactory
     ) {
-        parent::__construct($dateTimeFactory);
+        parent::__construct($dateTimeFactory, $discountFactory, $salesRuleRepository, $ruleFactory);
         $this->discountFactory = $discountFactory;
         $this->salesRuleRepository = $salesRuleRepository;
         $this->ruleFactory = $ruleFactory;
@@ -54,7 +49,14 @@ class LineItemDiscountsBuilder extends AbstractApiRequestParamsBuilder
     public function buildFromSalesOrderItem(SalesOrderItemInterface $salesOrderItem): array
     {
         $discounts = [];
-        $discountAmount = (float)$salesOrderItem->getDiscountAmount();
+
+        $discountAmountTotal = (float)$salesOrderItem->getDiscountAmount();
+        $quantity = (int)$salesOrderItem->getQtyOrdered();
+        $discountAmount = $discountAmountTotal / $quantity;
+
+        if ((float)$salesOrderItem->getPriceInclTax() == 0.0) {
+            $discountAmount = (float)$salesOrderItem->getOriginalPrice() * $quantity;
+        }
 
         if ($discountAmount && $salesOrderItem->getAppliedRuleIds()) {
             $ruleIds = explode(',', $salesOrderItem->getAppliedRuleIds());
@@ -62,20 +64,22 @@ class LineItemDiscountsBuilder extends AbstractApiRequestParamsBuilder
             foreach ($ruleIds as $ruleId) {
                 $discount = $this->buildRuleDiscount(
                     (int)$ruleId,
-                    (float)$salesOrderItem->getPriceInclTax()
+                    (float)$salesOrderItem->getPriceInclTax(),
+                    $quantity
                 );
 
                 if (!empty($discount)) {
                     $discounts[] = $discount;
+
+                    if ((float)$discount['discountAmount'] > 0) {
+                        $discountAmount -= (float)$discount['discountAmount'];
+                    }
                 }
             }
         }
 
-        $price = round((float)$salesOrderItem->getPriceInclTax(),2);
-        $originalPrice = round((float)$salesOrderItem->getOriginalPrice(),2);
-
-        if ($price < $originalPrice) {
-            $discounts[] = $this->buildSpecialPriceDiscount($price, $originalPrice);
+        if ($discountAmount > 0.02) { // Just to be safe regarding any rounding issues
+            $discounts[] = $this->buildSpecialPriceDiscount($discountAmount);
         }
 
         return $discounts;
@@ -86,10 +90,11 @@ class LineItemDiscountsBuilder extends AbstractApiRequestParamsBuilder
      *
      * @param int $ruleId
      * @param float $baseItemPrice
+     * @param int $quantity
      *
      * @return array
      */
-    private function buildRuleDiscount(int $ruleId, float $baseItemPrice): array
+    private function buildRuleDiscount(int $ruleId, float $baseItemPrice, int $quantity): array
     {
         try {
             $salesRule = $this->salesRuleRepository->getById($ruleId);
@@ -102,47 +107,53 @@ class LineItemDiscountsBuilder extends AbstractApiRequestParamsBuilder
             return [];
         }
 
-        /* @var DiscountInterface $discount */
+        if ($salesRule->getCouponType() != RuleInterface::COUPON_TYPE_SPECIFIC_COUPON) {
+            return [];
+        }
+
         $discount = $this->discountFactory->create();
+
+        try {
+            $couponCode = $this->ruleFactory->create()->load($ruleId)->getCouponCode();
+        } catch (\Exception $exception) {
+            return [];
+        }
 
         $discount->setTitle($salesRule->getName());
         $discount->setDescriptor($salesRule->getDescription());
 
-        if ($salesRule->getCouponType() === RuleInterface::COUPON_TYPE_SPECIFIC_COUPON) {
-            $couponCode = $this->ruleFactory->create()->load($ruleId)->getCouponCode();
-
-            $discount->setIsVoucher(true);
-            $discount->setVoucherCode($couponCode);
-        }
+        $discount->setIsVoucher(true);
+        $discount->setVoucherCode($couponCode);
 
         if ($salesRule->getSimpleAction() === RuleInterface::DISCOUNT_ACTION_BY_PERCENT) {
             $discountPercent = $salesRule->getDiscountAmount() / 100;
             $discount->setDiscountAmount($baseItemPrice * $discountPercent);
+        } elseif ($salesRule->getSimpleAction() === RuleInterface::DISCOUNT_ACTION_FIXED_AMOUNT) {
+            $discount->setDiscountAmount((float)$salesRule->getDiscountAmount());
+        } else {
+            return []; // Disallow other action types
         }
 
-        if ($salesRule->getSimpleAction() === RuleInterface::DISCOUNT_ACTION_FIXED_AMOUNT) {
-            $discount->setDiscountAmount((float)$salesRule->getDiscountAmount());
+        if ((float)$discount->getDiscountAmount() > 0) {
+            $discount->setDiscountAmount((float)$discount->getDiscountAmount() / $quantity);
         }
 
         return $this->snakeToCamel($discount->toArray());
     }
 
     /**
-     * Build discount array for special price.
+     * Build discount array for remaining discount (special price).
      *
-     * @param float $price
-     * @param float $originalPrice
-     *
+     * @param float $discountAmount
      * @return array
      */
-    private function buildSpecialPriceDiscount(float $price, float $originalPrice): array
+    private function buildSpecialPriceDiscount(float $discountAmount): array
     {
-        /* @var DiscountInterface $discount */
         $discount = $this->discountFactory->create();
 
         $discount->setTitle(DiscountInterface::SPECIAL_PRICE_DISCOUNT_TITLE);
         $discount->setDescriptor(DiscountInterface::SPECIAL_PRICE_DISCOUNT_DESCRIPTOR);
-        $discount->setDiscountAmount($originalPrice - $price);
+        $discount->setDiscountAmount($discountAmount);
 
         return $this->snakeToCamel($discount->toArray());
     }
