@@ -5,7 +5,7 @@
  * https://ict.lv/
  */
 -->
-<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:framework-message-queue:etc/consumer.xsd">
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:framework-message-queue:etc/publisher.xsd">
     <publisher topic="klar.order.synchronization">
         <connection name="db" exchange="magento-db" disabled="false" />
     </publisher>

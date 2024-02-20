@@ -162,7 +162,7 @@ If you want to re-export certain orders or export the whole order history you ca
 
 command 
 ```
-bin/magento klar:order <ids> [<from-date>] [<to-date]
+bin/magento klar:order <ids> [<from-date>] [<to-date] [-d]
 ```
 
 #### ids (required)
@@ -204,6 +204,18 @@ bin/magento klar:order all 2023-01-01 2023-06-01
 "Export all orders from the 1st of January 2023 to the 1st of June 2023."
 
 The range start and end are included.
+
+#### -d (optional)
+
+Dumps the JSON Array of the order(s) to be exported to the CLI. For debug purposes only. 
+
+Example:
+
+```
+bin/magento klar:order 000000001 -d
+```
+
+"Dump order with id 000000001 to the commandline."
 
 ## Support
 
