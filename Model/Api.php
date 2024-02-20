@@ -124,6 +124,18 @@ class Api implements ApiInterface
         return $result;
     }
 
+    public function getJsonDataForOrders(array $ids): string
+    {
+        $salesOrders = $this->getOrders($ids);
+
+        if ($salesOrders) {
+            $this->setRequestData($salesOrders);
+            return $this->requestData;
+        } else {
+            return __('Could not get order data');
+        }
+    }
+
     /**
      * Make order validate request.
      *

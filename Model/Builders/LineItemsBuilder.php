@@ -64,6 +64,9 @@ class LineItemsBuilder extends AbstractApiRequestParamsBuilder
         $lineItems = [];
 
         foreach ($salesOrder->getItems() as $salesOrderItem) {
+            if ($salesOrderItem->getParentItemId()) {
+                continue;
+            }
             $product = $salesOrderItem->getProduct();
             $productVariant = $this->getProductVariant($salesOrderItem);
             $productBrand = false;
