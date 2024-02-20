@@ -55,6 +55,7 @@ class LineItemDiscountsBuilder extends AbstractApiRequestParamsBuilder
     {
         $discounts = [];
         $discountAmount = (float)$salesOrderItem->getDiscountAmount();
+        $discountLeft = $discountAmount;
 
         if ($discountAmount && $salesOrderItem->getAppliedRuleIds()) {
             $ruleIds = explode(',', $salesOrderItem->getAppliedRuleIds());
@@ -67,8 +68,15 @@ class LineItemDiscountsBuilder extends AbstractApiRequestParamsBuilder
 
                 if (!empty($discount)) {
                     $discounts[] = $discount;
+                    if (isset($discount['discountAmount'])) {
+                        $discountLeft -= $salesOrderItem->getQtyOrdered() * $discount['discountAmount'];
+                    }
                 }
             }
+        }
+
+        if (round($discountLeft,2) > 0.02) {
+            $discounts[] = $this->buildOtherDiscount($discountLeft / $salesOrderItem->getQtyOrdered());
         }
 
         $price = round((float)$salesOrderItem->getPriceInclTax(),2);
@@ -118,11 +126,30 @@ class LineItemDiscountsBuilder extends AbstractApiRequestParamsBuilder
         if ($salesRule->getSimpleAction() === RuleInterface::DISCOUNT_ACTION_BY_PERCENT) {
             $discountPercent = $salesRule->getDiscountAmount() / 100;
             $discount->setDiscountAmount($baseItemPrice * $discountPercent);
+        } elseif ($salesRule->getSimpleAction() === RuleInterface::DISCOUNT_ACTION_FIXED_AMOUNT) {
+            $discount->setDiscountAmount((float)$salesRule->getDiscountAmount());
+        } else {
+            return []; // Disallow other action types
         }
 
-        if ($salesRule->getSimpleAction() === RuleInterface::DISCOUNT_ACTION_FIXED_AMOUNT) {
-            $discount->setDiscountAmount((float)$salesRule->getDiscountAmount());
-        }
+        return $this->snakeToCamel($discount->toArray());
+    }
+
+    /**
+     * Build discount array if there is some discount left after calculating them from core magento rules
+     *
+     * @param float $discountLeft
+     *
+     * @return array
+     */
+    private function buildOtherDiscount(float $discountLeft): array
+    {
+        /* @var DiscountInterface $discount */
+        $discount = $this->discountFactory->create();
+
+        $discount->setTitle(DiscountInterface::OTHER_DISCOUNT_TITLE);
+        $discount->setDescriptor(DiscountInterface::OTHER_DISCOUNT_DESCRIPTOR);
+        $discount->setDiscountAmount($discountLeft);
 
         return $this->snakeToCamel($discount->toArray());
     }

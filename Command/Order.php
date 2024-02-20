@@ -10,6 +10,7 @@ namespace ICT\Klar\Command;
 use ICT\Klar\Queue\OrderPublisher;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
+use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 use ICT\Klar\Model\Api;
@@ -19,6 +20,8 @@ class Order extends Command
     const IDS_PARAM = 'ids';
     const FROM_DATE_PARAM = 'from-date';
     const TO_DATE_PARAM = 'to-date';
+    const DEBUG_OPTION = 'debug';
+    const DEBUG_OPTION_SHORT = 'd';
 
     private Api $api;
     private OrderPublisher $orderPublisher;
@@ -56,10 +59,16 @@ class Order extends Command
                 InputArgument::OPTIONAL,
                 'From date to start "all" synchronization in format YYYY-MM-DD'
             ),
-             new InputArgument(
+            new InputArgument(
                 self::TO_DATE_PARAM,
                 InputArgument::OPTIONAL,
                 'To date to limit "all" synchronization in format YYYY-MM-DD'
+            ),
+            new InputOption(
+                self::DEBUG_OPTION,
+                self::DEBUG_OPTION_SHORT,
+                InputOption::VALUE_NONE,
+                'Debug mode - dumps the json data without sending it to API'
             ),
         ]);
 
@@ -78,6 +87,7 @@ class Order extends Command
         $idsInput = trim($input->getArgument(self::IDS_PARAM), ' ');
         $fromInput = $input->getArgument(self::FROM_DATE_PARAM);
         $toInput = $input->getArgument(self::TO_DATE_PARAM);
+        $debug = $input->getOption(self::DEBUG_OPTION);
         if ($fromInput) {
             $fromDate = \DateTime::createFromFormat('Y-m-d', trim($fromInput, ' '));
         }
@@ -94,6 +104,10 @@ class Order extends Command
             $ids = array_map('intval', explode(',', $idsInput));
 
             if ($ids) {
+                if ($debug) {
+                    var_dump($this->api->getJsonDataForOrders($ids));
+                    return self::SUCCESS;
+                }
                 $result = $this->api->validateAndSend($ids);
             }
 
