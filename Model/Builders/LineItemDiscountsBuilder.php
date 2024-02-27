@@ -79,6 +79,11 @@ class LineItemDiscountsBuilder extends AbstractApiRequestParamsBuilder
             $discounts[] = $this->buildOtherDiscount($discountLeft / $salesOrderItem->getQtyOrdered());
         }
 
+        $calculatedDiscounts = $this->sumCalculatedDiscounts($discounts);
+        if ($calculatedDiscounts - $discountAmount > 0.02) { // case when calculated discount is bigger than actual
+            $discounts = $this->rebuildDiscountsBasedOnFlatData($discounts, $discountAmount);
+        }
+
         $price = round((float)$salesOrderItem->getPriceInclTax(),2);
         $originalPrice = round((float)$salesOrderItem->getOriginalPrice(),2);
 
@@ -172,5 +177,32 @@ class LineItemDiscountsBuilder extends AbstractApiRequestParamsBuilder
         $discount->setDiscountAmount($originalPrice - $price);
 
         return $this->snakeToCamel($discount->toArray());
+    }
+
+    private function sumCalculatedDiscounts(array $discounts): float
+    {
+        $calculatedDiscounts = 0.00;
+        foreach ($discounts as $discount) {
+            $calculatedDiscounts += isset($discount['discountAmount']) ? $discount['discountAmount'] : 0.00;
+        }
+
+        return round($calculatedDiscounts, 2);
+    }
+
+    private function rebuildDiscountsBasedOnFlatData(array $discounts, float $discountAmount): array
+    {
+        $newDiscounts = [];
+        foreach ($discounts as $discount) {
+            if (abs($discountAmount - $discount['discountAmount']) < 0.02) {
+                $newDiscounts[] = $discount;
+                break;
+            }
+        }
+
+        if (empty($newDiscounts)) {
+            $newDiscounts[] = $this->buildOtherDiscount($discountAmount);
+        }
+
+        return $newDiscounts;
     }
 }
