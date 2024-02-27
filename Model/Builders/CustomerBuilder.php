@@ -9,6 +9,7 @@ namespace ICT\Klar\Model\Builders;
 
 use ICT\Klar\Api\Data\CustomerInterface;
 use ICT\Klar\Api\Data\CustomerInterfaceFactory;
+use ICT\Klar\Helper\Config;
 use ICT\Klar\Model\AbstractApiRequestParamsBuilder;
 use Magento\Framework\Encryption\Encryptor;
 use Magento\Framework\Encryption\EncryptorInterface;
@@ -20,21 +21,26 @@ class CustomerBuilder extends AbstractApiRequestParamsBuilder
     private CustomerInterfaceFactory $customerFactory;
     private EncryptorInterface $encryptor;
 
+    private Config $config;
     /**
      * CustomerBuilder builder.
      *
      * @param DateTimeFactory $dateTimeFactory
      * @param CustomerInterfaceFactory $customerFactory
      * @param EncryptorInterface $encryptor
+     * @param Config $config
+     *
      */
     public function __construct(
         DateTimeFactory $dateTimeFactory,
         CustomerInterfaceFactory $customerFactory,
-        EncryptorInterface $encryptor
+        EncryptorInterface $encryptor,
+        Config $config,
     ) {
         parent::__construct($dateTimeFactory);
         $this->customerFactory = $customerFactory;
         $this->encryptor = $encryptor;
+        $this->config = $config;
     }
 
     /**
@@ -47,7 +53,8 @@ class CustomerBuilder extends AbstractApiRequestParamsBuilder
     public function buildFromSalesOrder(SalesOrderInterface $salesOrder): array
     {
         $customerId = $salesOrder->getCustomerId();
-        $customerEmail = $salesOrder->getCustomerEmail();
+        $customerEmail = $this->config->getSendEmail() ? $salesOrder->getCustomerEmail() : "redacted@getklar.com";
+        $customerEmailHash = sha1($this->config->getPublicKey() . $salesOrder->getCustomerEmail());
 
         if (!$customerId) {
             $customerId = $this->generateGuestCustomerId($customerEmail);
@@ -58,6 +65,7 @@ class CustomerBuilder extends AbstractApiRequestParamsBuilder
 
         $customer->setId((string)$customerId);
         $customer->setEmail($customerEmail);
+        $customer->setEmailHash($customerEmailHash);
 
         return $this->snakeToCamel($customer->toArray());
     }
