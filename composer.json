@@ -1,6 +1,6 @@
 {
   "name": "ltd-iconcept/magento2-klar",
-  "version": "1.0.8",
+  "version": "1.0.9",
   "description": "Klar integration for Magento 2.4.x",
   "type": "magento2-module",
   "require": {
