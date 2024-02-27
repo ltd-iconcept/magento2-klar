@@ -152,6 +152,14 @@ The token can be found in Klar in the **Klar Api** data source created for this 
 
 ![Token](docs/token.png)
 
+#### Send Email
+
+Configure whether you want to send the customer's email along with the order info to Klar. Otherwise the hashed email address will be submitted.
+
+#### Public Key
+
+The Public Key used to hash the customer's email address. Please contact Klar's support to receive your public key.  
+
 ## Usage
 
 After the successful installation this module sends all orders to Klar after they've been placed in the Magento store. 
