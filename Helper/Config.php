@@ -20,6 +20,9 @@ class Config extends AbstractHelper
     private const CONFIG_PATH_API_URL = 'klar/integration/api_url';
     private const CONFIG_PATH_API_VERSION = 'klar/integration/api_version';
     private const CONFIG_PATH_API_TOKEN = 'klar/integration/api_token';
+
+    private const CONFIG_PATH_SEND_EMAIL = 'klar/integration/send_email';
+    private const CONFIG_PATH_PUBLIC_KEY = 'klar/integration/public_key';
     private const CONFIG_PATH_WEIGHT_UNIT = 'general/locale/weight_unit';
 
     private Encrypted $encrypted;
@@ -68,6 +71,28 @@ class Config extends AbstractHelper
         $tokenEncrypted = $this->scopeConfig->getValue(self::CONFIG_PATH_API_TOKEN);
 
         return $this->encrypted->processValue($tokenEncrypted);
+    }
+
+    /**
+     * Get "Klar > Integration > Public key" config value.
+     *
+     * @return string|null
+     */
+    public function getPublicKey(): ?string
+    {
+        $publicKeyEncrypted = $this->scopeConfig->getValue(self::CONFIG_PATH_PUBLIC_KEY);
+
+        return $this->encrypted->processValue($publicKeyEncrypted);
+    }
+
+    /**
+     * Get "Klar > Integration > Send Email" config value.
+     *
+     * @return bool
+     */
+    public function getSendEmail(): bool
+    {
+        return (bool)$this->scopeConfig->getValue(self::CONFIG_PATH_SEND_EMAIL);
     }
 
     /**

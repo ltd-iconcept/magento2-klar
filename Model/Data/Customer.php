@@ -45,6 +45,28 @@ class Customer extends DataObject implements CustomerInterface
     }
 
     /**
+     * Setter for Email Hash.
+     *
+     * @param string|null $email
+     *
+     * @return void
+     */
+    public function setEmailHash(?string $emailHash): void
+    {
+        $this->setData(self::EMAIL_HASH, $emailHash);
+    }
+
+    /**
+     * Getter for Email Hash.
+     *
+     * @return string|null
+     */
+    public function getEmailHash(): ?string
+    {
+        return $this->getData(self::EMAIL_HASH);
+    }
+
+    /**
      * Setter for Email.
      *
      * @param string|null $email
@@ -55,6 +77,7 @@ class Customer extends DataObject implements CustomerInterface
     {
         $this->setData(self::EMAIL, $email);
     }
+
 
     /**
      * Getter for IsNewsletterSubscriberAtTimeOfCheckout.
