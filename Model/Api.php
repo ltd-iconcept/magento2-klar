@@ -10,14 +10,12 @@ namespace ICT\Klar\Model;
 use Exception;
 use ICT\Klar\Api\Data\ApiInterface;
 use ICT\Klar\Helper\Config;
-use Magento\Framework\Api\FilterBuilder;
 use Magento\Framework\Exception\NoSuchEntityException;
 use Magento\Framework\HTTP\Client\Curl;
 use Magento\Framework\Serialize\Serializer\Json;
 use Magento\Sales\Api\Data\OrderInterface as SalesOrderInterface;
-use Magento\Sales\Api\OrderRepositoryInterface as SalesOrderRepositoryInterface;
 use Psr\Log\LoggerInterface as PsrLoggerInterface;
-use Magento\Framework\Api\SearchCriteriaBuilder;
+use Magento\Sales\Model\ResourceModel\Order\CollectionFactory as OrderCollectionFactory;
 
 class Api implements ApiInterface
 {
@@ -26,10 +24,8 @@ class Api implements ApiInterface
     private PsrLoggerInterface $logger;
     private ApiRequestParamsBuilder $paramsBuilder;
     private string $requestData;
-    private SalesOrderRepositoryInterface $salesOrderRepository;
-    private SearchCriteriaBuilder $searchCriteriaBuilder;
-    private FilterBuilder $filterBuilder;
     private Json $jsonSerializer;
+    private OrderCollectionFactory $orderCollectionFactory;
 
     /**
      * Api constructor.
@@ -38,30 +34,24 @@ class Api implements ApiInterface
      * @param Config $config
      * @param PsrLoggerInterface $logger
      * @param ApiRequestParamsBuilder $paramsBuilder
-     * @param SalesOrderRepositoryInterface $salesOrderRepository
-     * @param SearchCriteriaBuilder $searchCriteriaBuilder
-     * @param FilterBuilder $filterBuilder
      * @param Json $jsonSerializer
+     * @param OrderCollectionFactory $orderCollectionFactory
      */
     public function __construct(
         Curl $curl,
         Config $config,
         PsrLoggerInterface $logger,
         ApiRequestParamsBuilder $paramsBuilder,
-        SalesOrderRepositoryInterface $salesOrderRepository,
-        SearchCriteriaBuilder $searchCriteriaBuilder,
-        FilterBuilder $filterBuilder,
-        Json $jsonSerializer
+        Json $jsonSerializer,
+        OrderCollectionFactory $orderCollectionFactory
     ) {
         $this->requestData = '';
         $this->curl = $curl;
         $this->config = $config;
         $this->logger = $logger;
         $this->paramsBuilder = $paramsBuilder;
-        $this->salesOrderRepository = $salesOrderRepository;
-        $this->searchCriteriaBuilder = $searchCriteriaBuilder;
-        $this->filterBuilder = $filterBuilder;
         $this->jsonSerializer = $jsonSerializer;
+        $this->orderCollectionFactory = $orderCollectionFactory;
     }
 
     /**
@@ -75,15 +65,10 @@ class Api implements ApiInterface
     private function getOrders(array $orderIds): ?array
     {
         if ($this->config->getIsEnabled()) {
-            $orderIdsFilter = $this->filterBuilder
-                ->setField('entity_id')
-                ->setConditionType('in')
-                ->setValue($orderIds)
-                ->create();
-            $this->searchCriteriaBuilder->addFilters([$orderIdsFilter]);
-            $searchCriteria = $this->searchCriteriaBuilder->create();
-            $searchResults = $this->salesOrderRepository->getList($searchCriteria);
-            $items = $searchResults->getItems();
+            $items = $this->orderCollectionFactory->create()
+                ->addFieldToFilter('entity_id', ['in' => $orderIds])
+                ->getItems();
+
             if (count($items) !== count($orderIds)) {
                 throw new NoSuchEntityException(
                     __('Could not find orders with ids: `%ids`',
