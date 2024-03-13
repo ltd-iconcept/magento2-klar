@@ -234,7 +234,7 @@ class LineItemsBuilder extends AbstractApiRequestParamsBuilder
         $productGmv = $lineItem->getProductGmv() * $quantity;
 
         foreach ($lineItem->getTaxes() as $lineItemTax) {
-            $taxAmount += $lineItemTax['taxAmount'] * $quantity;
+            $taxAmount += round($lineItemTax['taxAmount'] * $quantity, 2);
         }
 
         foreach ($lineItem->getDiscounts() as $lineItemDiscount) {
