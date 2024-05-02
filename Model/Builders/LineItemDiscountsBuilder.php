@@ -10,6 +10,7 @@ namespace ICT\Klar\Model\Builders;
 use ICT\Klar\Api\Data\DiscountInterface;
 use ICT\Klar\Api\Data\DiscountInterfaceFactory;
 use ICT\Klar\Model\AbstractApiRequestParamsBuilder;
+use ICT\Klar\Api\DiscountServiceInterface;
 use Magento\Framework\Exception\LocalizedException;
 use Magento\Framework\Exception\NoSuchEntityException;
 use Magento\Framework\Intl\DateTimeFactory;
@@ -21,6 +22,7 @@ use Magento\SalesRule\Model\RuleFactory;
 class LineItemDiscountsBuilder extends AbstractApiRequestParamsBuilder
 {
     private DiscountInterfaceFactory $discountFactory;
+    private DiscountServiceInterface $discountService;
     private RuleRepositoryInterface $salesRuleRepository;
     private RuleFactory $ruleFactory;
 
@@ -29,17 +31,20 @@ class LineItemDiscountsBuilder extends AbstractApiRequestParamsBuilder
      *
      * @param DateTimeFactory $dateTimeFactory
      * @param DiscountInterfaceFactory $discountFactory
+     * @param DiscountServiceInterface $discountService
      * @param RuleRepositoryInterface $salesRuleRepository
      * @param RuleFactory $ruleFactory
      */
     public function __construct(
         DateTimeFactory $dateTimeFactory,
         DiscountInterfaceFactory $discountFactory,
+        DiscountServiceInterface $discountService,
         RuleRepositoryInterface $salesRuleRepository,
         RuleFactory $ruleFactory
     ) {
         parent::__construct($dateTimeFactory);
         $this->discountFactory = $discountFactory;
+        $this->discountService = $discountService;
         $this->salesRuleRepository = $salesRuleRepository;
         $this->ruleFactory = $ruleFactory;
     }
@@ -54,7 +59,7 @@ class LineItemDiscountsBuilder extends AbstractApiRequestParamsBuilder
     public function buildFromSalesOrderItem(SalesOrderItemInterface $salesOrderItem): array
     {
         $discounts = [];
-        $discountAmount = (float)$salesOrderItem->getDiscountAmount();
+        $discountAmount = $this->discountService->getDiscountAmountFromOrderItem($salesOrderItem);
         $discountLeft = $discountAmount;
 
         if ($discountAmount && $salesOrderItem->getAppliedRuleIds()) {
