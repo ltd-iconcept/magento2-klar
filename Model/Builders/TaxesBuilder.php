@@ -9,6 +9,7 @@ namespace ICT\Klar\Model\Builders;
 
 use ICT\Klar\Api\Data\TaxInterface;
 use ICT\Klar\Api\Data\TaxInterfaceFactory;
+use ICT\Klar\Api\DiscountServiceInterface;
 use ICT\Klar\Model\AbstractApiRequestParamsBuilder;
 use Magento\Framework\Intl\DateTimeFactory;
 use Magento\Sales\Api\Data\OrderItemInterface;
@@ -21,6 +22,7 @@ class TaxesBuilder extends AbstractApiRequestParamsBuilder
 
     private TaxItemResource $taxItemResource;
     private TaxInterfaceFactory $taxFactory;
+    private DiscountServiceInterface $discountService;
 
     /**
      * TaxesBuilder constructor.
@@ -28,15 +30,18 @@ class TaxesBuilder extends AbstractApiRequestParamsBuilder
      * @param DateTimeFactory $dateTimeFactory
      * @param TaxItemResource $taxItemResource
      * @param TaxInterfaceFactory $taxFactory
+     * @param DiscountServiceInterface $discountService
      */
     public function __construct(
         DateTimeFactory $dateTimeFactory,
         TaxItemResource $taxItemResource,
-        TaxInterfaceFactory $taxFactory
+        TaxInterfaceFactory $taxFactory,
+        DiscountServiceInterface $discountService
     ) {
         parent::__construct($dateTimeFactory);
         $this->taxItemResource = $taxItemResource;
         $this->taxFactory = $taxFactory;
+        $this->discountService = $discountService;
     }
 
     /**
@@ -68,7 +73,8 @@ class TaxesBuilder extends AbstractApiRequestParamsBuilder
                 }
 
                 $qty = $salesOrderItem->getQtyOrdered() ? $salesOrderItem->getQtyOrdered() : 1;
-                $itemPrice = (float)$salesOrderItem->getPriceInclTax() - ((float)$salesOrderItem->getDiscountAmount() / $qty);
+                $itemPrice = (float)$salesOrderItem->getPriceInclTax() 
+                                - ($this->discountService->getDiscountAmountFromOrderItem($salesOrderItem) / $qty);
                 $taxAmount = $itemPrice - ($itemPrice / (1+ $taxRate));
             } else {
                 $taxAmount = (float)$taxItem['real_amount'];
