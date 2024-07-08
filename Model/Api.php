@@ -145,17 +145,16 @@ class Api implements ApiInterface
             $this->requestData
         );
 
-        if ($this->getCurlClient()->getStatus() === self::STATUS_OK) {
+        if ($this->getCurlClient()->getStatus() === self::STATUS_OK || $this->getCurlClient()->getStatus() === self::STATUS_CREATED) {
             return $this->handleSuccess($orderIds);
         }
 
         if ($this->getCurlClient()->getStatus() === self::STATUS_BAD_REQUEST) {
+            $this->logger->info(__('Failed to validate orders "#%1".', $orderIds));
             return $this->handleError($orderIds);
         }
 
-        $this->logger->info(__('Failed to validate orders "#%1".', $orderIds));
-
-        return false;
+        return true;
     }
 
     /**
