@@ -354,7 +354,7 @@ class Api implements ApiInterface
             $this->requestData
         );
 
-        if ($this->getCurlClient()->getStatus() === self::STATUS_OK) {
+        if ($this->getCurlClient()->getStatus() === self::STATUS_OK || $this->getCurlClient()->getStatus() === self::STATUS_CREATED) {
             $this->logger->info(__('Orders "#%1" successfully sent to Klar.', $orderIds));
             $result = count($salesOrders);
         } else {
