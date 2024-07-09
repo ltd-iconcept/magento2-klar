@@ -75,6 +75,7 @@ class Api implements ApiInterface
                         [
                             'ids' => implode(', ', array_diff(array_keys($items), $orderIds))
                         ]
+
                     )
                 );
             }
@@ -87,7 +88,7 @@ class Api implements ApiInterface
     /**
      * {@inheritDoc}
      */
-    public function validateAndSend(array $ids): int
+    public function send(array $ids): int
     {
         $result = 0;
         $salesOrders = $this->getOrders($ids);
@@ -98,15 +99,7 @@ class Api implements ApiInterface
             return $result;
         }
 
-        if ($this->validate($salesOrders)) {
-            $result = $this->json($salesOrders);
-        } elseif (count($ids) > 1) {
-            foreach ($ids as $id) {
-                $result += $this->validateAndSend([$id]);
-            }
-        }
-
-        return $result;
+        return $this->json($salesOrders);
     }
 
     public function getJsonDataForOrders(array $ids): string
@@ -119,42 +112,6 @@ class Api implements ApiInterface
         } else {
             return __('Could not get order data');
         }
-    }
-
-    /**
-     * Make order validate request.
-     *
-     * @param SalesOrderInterface[] $salesOrders
-     *
-     * @return bool
-     */
-    private function validate(array $salesOrders): bool
-    {
-        $orderIds = implode(', ', array_keys($salesOrders));
-        $this->logger->info(__('Validating orders "#%1".', $orderIds));
-
-        if (count($salesOrders) > self::BATCH_SIZE) {
-            $this->logger->info(
-                __('Batch size must be less or equal %1, %2 provided.', self::BATCH_SIZE, count($salesOrders))
-            );
-            return false;
-        }
-
-        $this->getCurlClient()->post(
-            $this->getRequestUrl(self::ORDERS_VALIDATE_PATH, true),
-            $this->requestData
-        );
-
-        if ($this->getCurlClient()->getStatus() === self::STATUS_OK || $this->getCurlClient()->getStatus() === self::STATUS_CREATED) {
-            return $this->handleSuccess($orderIds);
-        }
-
-        if ($this->getCurlClient()->getStatus() === self::STATUS_BAD_REQUEST) {
-            $this->logger->info(__('Failed to validate orders "#%1".', $orderIds));
-            return $this->handleError($orderIds);
-        }
-
-        return true;
     }
 
     /**
@@ -201,6 +158,7 @@ class Api implements ApiInterface
             'Expect' => '',
             'Content-Type' => 'application/json',
             'Authorization' => 'Bearer ' . $this->getApiToken(),
+            'User-Agent' => 'getklar/' . self::VERSION .' (magento2)'
         ];
     }
 
@@ -231,7 +189,7 @@ class Api implements ApiInterface
             return rtrim($baseUrl, "/") . '/' . $version . $path;
         }
 
-        return $this->config->getApiUrl() . $path;
+        return $this->config->getApiUrl() . $path . '?newErrors=true';
     }
 
     /**
@@ -354,11 +312,14 @@ class Api implements ApiInterface
             $this->requestData
         );
 
-        if ($this->getCurlClient()->getStatus() === self::STATUS_OK || $this->getCurlClient()->getStatus() === self::STATUS_CREATED) {
+        $body = $this->getCurlBody();
+        if (isset($body['status']) && $body['status'] === self::ORDER_STATUS_VALID) {
             $this->logger->info(__('Orders "#%1" successfully sent to Klar.', $orderIds));
             $result = count($salesOrders);
+        } elseif (isset($body['status']) && $body['status'] === self::ORDER_STATUS_INVALID) {
+            $this->logger->error(__('Failed to validate orders "#%1".', $body));
         } else {
-            $this->logger->info(__('Failed to send orders "#%1".', $orderIds));
+            $this->logger->info(__('Failed to send orders "#%1" with statuscode "#%2".', $orderIds, $this->getStatus()));
         }
 
         return $result;
