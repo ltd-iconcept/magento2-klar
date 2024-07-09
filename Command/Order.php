@@ -108,7 +108,8 @@ class Order extends Command
                     var_dump($this->api->getJsonDataForOrders($ids));
                     return self::SUCCESS;
                 }
-                $result = $this->api->validateAndSend($ids);
+
+                $result = $this->api->send($ids);
             }
 
             if ($result == count($ids)) {

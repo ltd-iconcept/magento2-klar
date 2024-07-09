@@ -46,7 +46,7 @@ class OrderQueue
         $ids = $this->jsonSerializer->unserialize($serializedData);
 
         try {
-            $result = (bool) $this->api->validateAndSend($ids);
+            $result = (bool) $this->api->send($ids);
             $resultValue = (int)$result;
 
             $values = [];
