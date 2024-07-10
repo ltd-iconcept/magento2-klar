@@ -14,9 +14,8 @@ interface ApiInterface
     public const ORDERS_JSON_PATH = '/orders/json';
     public const ORDER_STATUS_VALID = 'VALID';
     public const ORDER_STATUS_INVALID = 'INVALID';
-    public const STATUS_OK = 201;
-    public const STATUS_BAD_REQUEST = 400;
-    public const BATCH_SIZE = 5;
+    public const BATCH_SIZE = 10;
+    public const VERSION = '1.0.11';
 
     /**
      * Get Klar orders status.
@@ -26,11 +25,11 @@ interface ApiInterface
     public function getStatus(): array;
 
     /**
-     * Validate orders and send to Klar.
+     * Sends to Klar.
      *
      * @param int[] $salesOrders
      *
      * @return int
      */
-    public function validateAndSend(array $ids): int;
+    public function send(array $ids): int;
 }
