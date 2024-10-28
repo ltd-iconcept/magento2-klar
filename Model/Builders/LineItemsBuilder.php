@@ -100,7 +100,7 @@ class LineItemsBuilder extends AbstractApiRequestParamsBuilder
             }
 
             $lineItem->setProductCogs((float)$salesOrderItem->getBaseCost());
-            $lineItem->setProductGmv((float)$salesOrderItem->getOriginalPrice());
+            $lineItem->setProductGmv($this->getProductGmv($salesOrderItem));
             $lineItem->setProductShippingWeightInGrams($weightInGrams);
             $lineItem->setSku($salesOrderItem->getSku());
             $lineItem->setQuantity((float)$salesOrderItem->getQtyOrdered());
@@ -217,6 +217,12 @@ class LineItemsBuilder extends AbstractApiRequestParamsBuilder
         $weightInKgs = $weightLbs * $conversionFactor;
 
         return round($weightInKgs, 3);
+    }
+
+    private function getProductGmv(SalesOrderItemInterface $salesOrderItem): float
+    {
+        return round($salesOrderItem->getOriginalPrice(), 2) !== 0.0 ?
+            (float) $salesOrderItem->getOriginalPrice() : (float) $salesOrderItem->getPrice();
     }
 
     /**
