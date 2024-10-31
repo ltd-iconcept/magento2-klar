@@ -221,7 +221,7 @@ class LineItemsBuilder extends AbstractApiRequestParamsBuilder
 
     private function getProductGmv(SalesOrderItemInterface $salesOrderItem): float
     {
-        return round($salesOrderItem->getOriginalPrice(), 2) !== 0.0 ?
+        return round((float) $salesOrderItem->getOriginalPrice(), 2) !== 0.0 ?
             (float) $salesOrderItem->getOriginalPrice() : (float) $salesOrderItem->getPrice();
     }
 
