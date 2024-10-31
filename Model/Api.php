@@ -317,9 +317,9 @@ class Api implements ApiInterface
             $this->logger->info(__('Orders "#%1" successfully sent to Klar.', $orderIds));
             $result = count($salesOrders);
         } elseif (isset($body['status']) && $body['status'] === self::ORDER_STATUS_INVALID) {
-            $this->logger->error(__('Failed to validate orders "#%1".', $body));
+            $this->logger->error(__('Failed to validate orders "#%1".', json_encode($body)));
         } else {
-            $this->logger->info(__('Failed to send orders "#%1" with statuscode "#%2".', $orderIds, $this->getStatus()));
+            $this->logger->info(__('Failed to send orders "#%1" with statuscode "#%2".', $orderIds, json_encode($this->getStatus())));
         }
 
         return $result;
