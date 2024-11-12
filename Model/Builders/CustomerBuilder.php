@@ -21,6 +21,7 @@ class CustomerBuilder extends AbstractApiRequestParamsBuilder
     private CustomerInterfaceFactory $customerFactory;
     private EncryptorInterface $encryptor;
 
+
     private Config $config;
     /**
      * CustomerBuilder builder.
@@ -41,7 +42,7 @@ class CustomerBuilder extends AbstractApiRequestParamsBuilder
         $this->customerFactory = $customerFactory;
         $this->encryptor = $encryptor;
         $this->config = $config;
-    }
+    }   
 
     /**
      * Build customer from sales order.
@@ -66,6 +67,13 @@ class CustomerBuilder extends AbstractApiRequestParamsBuilder
         $customer->setId((string)$customerId);
         $customer->setEmail($customerEmail);
         $customer->setEmailHash($customerEmailHash);
+
+        // Get customer group ID from order and load group name
+        $customerGroupId = $salesOrder->getCustomerGroupId();
+        if ($customerGroupId) {
+            $tags = ["customerGroupId-" . (string)$customerGroupId];
+            $customer->setTags($tags);
+        }
 
         return $this->snakeToCamel($customer->toArray());
     }
