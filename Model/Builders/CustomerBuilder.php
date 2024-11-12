@@ -21,7 +21,7 @@ class CustomerBuilder extends AbstractApiRequestParamsBuilder
 {
     private CustomerInterfaceFactory $customerFactory;
     private EncryptorInterface $encryptor;
-    protected GroupRepositoryInterface $groupRepository;
+    private GroupRepositoryInterface $groupRepository;
 
 
     private Config $config;
