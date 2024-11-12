@@ -15,13 +15,13 @@ use Magento\Framework\Encryption\Encryptor;
 use Magento\Framework\Encryption\EncryptorInterface;
 use Magento\Framework\Intl\DateTimeFactory;
 use Magento\Sales\Api\Data\OrderInterface as SalesOrderInterface;
-use Magento\Customer\Api\GroupRepositoryInterface;
+use Magento\Customer\Api\GroupRepositoryInterface as CustomerGroupRepositoryInterface;
 
 class CustomerBuilder extends AbstractApiRequestParamsBuilder
 {
     private CustomerInterfaceFactory $customerFactory;
     private EncryptorInterface $encryptor;
-    private GroupRepositoryInterface $groupRepository;
+    private CustomerGroupRepositoryInterface $groupRepository;
 
 
     private Config $config;
@@ -32,7 +32,7 @@ class CustomerBuilder extends AbstractApiRequestParamsBuilder
      * @param CustomerInterfaceFactory $customerFactory
      * @param EncryptorInterface $encryptor
      * @param Config $config
-     * @param GroupRepositoryInterface $groupRepository
+     * @param CustomerGroupRepositoryInterface $groupRepository
      *
      */
     public function __construct(
@@ -40,7 +40,7 @@ class CustomerBuilder extends AbstractApiRequestParamsBuilder
         CustomerInterfaceFactory $customerFactory,
         EncryptorInterface $encryptor,
         Config $config,
-        GroupRepositoryInterface $groupRepository
+        CustomerGroupRepositoryInterface $groupRepository
     ) {
         parent::__construct($dateTimeFactory);
         $this->customerFactory = $customerFactory;
