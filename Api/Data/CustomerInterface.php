@@ -84,16 +84,16 @@ interface CustomerInterface
     /**
      * Getter for Tags.
      *
-     * @return string|null
+     * @return array|null
      */
-    public function getTags(): ?string;
+    public function getTags(): ?array;
 
     /**
      * Setter for Tags.
      *
-     * @param string|null $tags
+     * @param array|null $tags
      *
      * @return void
      */
-    public function setTags(?string $tags): void;
+    public function setTags(?array $tags): void;
 }

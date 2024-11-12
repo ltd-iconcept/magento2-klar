@@ -71,8 +71,8 @@ class CustomerBuilder extends AbstractApiRequestParamsBuilder
         // Get customer group ID from order and load group name
         $customerGroupId = $salesOrder->getCustomerGroupId();
         if ($customerGroupId) {
-            // Add group id as a tag
-            $customer->setTags("customerGroupId-" . (string)$customerGroupId);
+            $tags = ["customerGroupId-" . (string)$customerGroupId];
+            $customer->setTags($tags);
         }
 
         return $this->snakeToCamel($customer->toArray());
