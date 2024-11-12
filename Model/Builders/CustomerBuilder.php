@@ -32,6 +32,7 @@ class CustomerBuilder extends AbstractApiRequestParamsBuilder
      * @param CustomerInterfaceFactory $customerFactory
      * @param EncryptorInterface $encryptor
      * @param Config $config
+     * @param GroupRepositoryInterface $groupRepository
      *
      */
     public function __construct(
