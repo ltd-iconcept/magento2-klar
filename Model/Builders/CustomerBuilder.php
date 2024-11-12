@@ -15,13 +15,11 @@ use Magento\Framework\Encryption\Encryptor;
 use Magento\Framework\Encryption\EncryptorInterface;
 use Magento\Framework\Intl\DateTimeFactory;
 use Magento\Sales\Api\Data\OrderInterface as SalesOrderInterface;
-use Magento\Customer\Api\GroupRepositoryInterface as CustomerGroupRepositoryInterface;
 
 class CustomerBuilder extends AbstractApiRequestParamsBuilder
 {
     private CustomerInterfaceFactory $customerFactory;
     private EncryptorInterface $encryptor;
-    private CustomerGroupRepositoryInterface $groupRepository;
 
 
     private Config $config;
@@ -32,7 +30,6 @@ class CustomerBuilder extends AbstractApiRequestParamsBuilder
      * @param CustomerInterfaceFactory $customerFactory
      * @param EncryptorInterface $encryptor
      * @param Config $config
-     * @param CustomerGroupRepositoryInterface $groupRepository
      *
      */
     public function __construct(
@@ -40,13 +37,11 @@ class CustomerBuilder extends AbstractApiRequestParamsBuilder
         CustomerInterfaceFactory $customerFactory,
         EncryptorInterface $encryptor,
         Config $config,
-        CustomerGroupRepositoryInterface $groupRepository
     ) {
         parent::__construct($dateTimeFactory);
         $this->customerFactory = $customerFactory;
         $this->encryptor = $encryptor;
         $this->config = $config;
-        $this->$groupRepository = $groupRepository;
     }   
 
     /**
@@ -76,11 +71,8 @@ class CustomerBuilder extends AbstractApiRequestParamsBuilder
         // Get customer group ID from order and load group name
         $customerGroupId = $salesOrder->getCustomerGroupId();
         if ($customerGroupId) {
-            $customerGroup = $this->groupRepository->getById($customerGroupId);
-            $customerGroupName = $customerGroup->getCode(); // Get the group name (code)
-
             // Add group name as a tag
-            $customer->setTags($customerGroupName);
+            $customer->setTags((string)$customerGroupId);
         }
 
         return $this->snakeToCamel($customer->toArray());
