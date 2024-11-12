@@ -15,11 +15,14 @@ use Magento\Framework\Encryption\Encryptor;
 use Magento\Framework\Encryption\EncryptorInterface;
 use Magento\Framework\Intl\DateTimeFactory;
 use Magento\Sales\Api\Data\OrderInterface as SalesOrderInterface;
+use Magento\Customer\Api\GroupRepositoryInterface;
 
 class CustomerBuilder extends AbstractApiRequestParamsBuilder
 {
     private CustomerInterfaceFactory $customerFactory;
     private EncryptorInterface $encryptor;
+    protected GroupRepositoryInterface $groupRepository;
+
 
     private Config $config;
     /**
@@ -36,12 +39,14 @@ class CustomerBuilder extends AbstractApiRequestParamsBuilder
         CustomerInterfaceFactory $customerFactory,
         EncryptorInterface $encryptor,
         Config $config,
+        GroupRepositoryInterface $groupRepository
     ) {
         parent::__construct($dateTimeFactory);
         $this->customerFactory = $customerFactory;
         $this->encryptor = $encryptor;
         $this->config = $config;
-    }
+        $this->$groupRepository = $groupRepository;
+    }   
 
     /**
      * Build customer from sales order.
@@ -66,6 +71,16 @@ class CustomerBuilder extends AbstractApiRequestParamsBuilder
         $customer->setId((string)$customerId);
         $customer->setEmail($customerEmail);
         $customer->setEmailHash($customerEmailHash);
+
+        // Get customer group ID from order and load group name
+        $customerGroupId = $salesOrder->getCustomerGroupId();
+        if ($customerGroupId) {
+            $customerGroup = $this->groupRepository->getById($customerGroupId);
+            $customerGroupName = $customerGroup->getCode(); // Get the group name (code)
+
+            // Add group name as a tag
+            $customer->setTags($customerGroupName);
+        }
 
         return $this->snakeToCamel($customer->toArray());
     }
