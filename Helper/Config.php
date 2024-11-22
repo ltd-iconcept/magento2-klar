@@ -52,7 +52,7 @@ class Config extends AbstractHelper
      */
     public function getCurrentVersion(): ?string
     {
-        $composerJsonPath = '../composer.json';
+        $composerJsonPath = BP . '/composer.json';
         if ($this->file->isExists($composerJsonPath)) {
             $content = $this->file->fileGetContents($composerJsonPath);
             $data = json_decode($content, true);
