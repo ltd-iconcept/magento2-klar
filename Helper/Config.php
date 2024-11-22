@@ -35,10 +35,12 @@ class Config extends AbstractHelper
      */
     public function __construct(
         Context $context,
-        Encrypted $encrypted
+        Encrypted $encrypted,
+        File $file
     ) {
         parent::__construct($context);
         $this->encrypted = $encrypted;
+        $this->file = $file;
     }
 
     /**
