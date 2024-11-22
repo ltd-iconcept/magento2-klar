@@ -15,7 +15,6 @@ interface ApiInterface
     public const ORDER_STATUS_VALID = 'VALID';
     public const ORDER_STATUS_INVALID = 'INVALID';
     public const BATCH_SIZE = 250;
-    public const VERSION = '1.0.11';
 
     /**
      * Get Klar orders status.

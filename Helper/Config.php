@@ -42,6 +42,22 @@ class Config extends AbstractHelper
     }
 
     /**
+     * Get the current version from composer.json.
+     *
+     * @return string|null
+     */
+    public function getCurrentVersion(): ?string
+    {
+        $composerJsonPath = BP . '/composer.json';
+        if ($this->file->isExists($composerJsonPath)) {
+            $content = $this->file->fileGetContents($composerJsonPath);
+            $data = json_decode($content, true);
+            return $data['version'] ?? null;
+        }
+        return null;
+    }
+
+    /**
      * Get "Klar > Integration > Enabled" config value.
      *
      * @return bool

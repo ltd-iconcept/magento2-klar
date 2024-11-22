@@ -158,7 +158,7 @@ class Api implements ApiInterface
             'Expect' => '',
             'Content-Type' => 'application/json',
             'Authorization' => 'Bearer ' . $this->getApiToken(),
-            'User-Agent' => 'getklar/' . self::VERSION .' (magento2)'
+            'User-Agent' => 'getklar/' . $this->config->getCurrentVersion() .' (magento2)'
         ];
     }
 
