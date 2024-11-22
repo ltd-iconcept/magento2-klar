@@ -11,6 +11,7 @@ use Magento\Config\Model\Config\Backend\Encrypted;
 use Magento\Framework\App\Helper\AbstractHelper;
 use Magento\Framework\App\Helper\Context;
 use Magento\Store\Model\ScopeInterface;
+use Magento\Framework\Filesystem\Driver\File;
 
 class Config extends AbstractHelper
 {
