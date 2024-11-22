@@ -27,6 +27,7 @@ class Config extends AbstractHelper
     private const CONFIG_PATH_WEIGHT_UNIT = 'general/locale/weight_unit';
 
     private Encrypted $encrypted;
+    private File $file;
 
     /**
      * Config constructor.
