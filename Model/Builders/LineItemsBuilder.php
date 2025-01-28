@@ -196,6 +196,8 @@ class LineItemsBuilder extends AbstractApiRequestParamsBuilder
             // Convert LBS to KGS if unit is LBS
             if ($weightUnit === Config::WEIGHT_UNIT_LBS) {
                 $productWeightInKgs = $this->convertLbsToKgs($productWeight);
+            } else {
+                $productWeightInKgs = $productWeight;
             }
 
             return $productWeightInKgs * 1000;
