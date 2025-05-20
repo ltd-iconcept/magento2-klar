@@ -73,7 +73,7 @@ class TaxesBuilder extends AbstractApiRequestParamsBuilder
                 }
 
                 $qty = $salesOrderItem->getQtyOrdered() ? $salesOrderItem->getQtyOrdered() : 1;
-                $itemPrice = (float)$salesOrderItem->getPriceInclTax() 
+                $itemPrice = (float)$salesOrderItem->getPriceInclTax()
                                 - ($this->discountService->getDiscountAmountFromOrderItem($salesOrderItem) / $qty);
                 $taxAmount = $itemPrice - ($itemPrice / (1+ $taxRate));
             } else {
@@ -97,5 +97,30 @@ class TaxesBuilder extends AbstractApiRequestParamsBuilder
         }
 
         return $taxes;
+    }
+
+    /**
+     * Build taxes for Bundle based on its children taxes
+     *
+     * @param array $lineItem
+     * @return array
+     */
+    public function buildBundleTaxes(array $lineItem): array
+    {
+        $taxes = [];
+
+        foreach ($lineItem['bundledProducts'] as $bundledProduct) {
+            foreach ($bundledProduct['taxes'] as $tax) {
+                if (!isset($taxes[$tax['title']])) {
+                    // Add first record for current tax
+                    $taxes[$tax['title']] = $tax;
+                } else {
+                    // Add tax amount to the existing record
+                    $taxes[$tax['title']]['taxAmount'] += $tax['taxAmount'] * $bundledProduct['quantity'];
+                }
+            }
+        }
+
+        return array_values($taxes);
     }
 }

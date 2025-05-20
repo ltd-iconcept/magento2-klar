@@ -11,6 +11,7 @@ use ICT\Klar\Api\Data\DiscountInterface;
 use ICT\Klar\Api\Data\DiscountInterfaceFactory;
 use ICT\Klar\Model\AbstractApiRequestParamsBuilder;
 use ICT\Klar\Api\DiscountServiceInterface;
+use Magento\Bundle\Model\Product\Type as BundleProductType;
 use Magento\Framework\Exception\LocalizedException;
 use Magento\Framework\Exception\NoSuchEntityException;
 use Magento\Framework\Intl\DateTimeFactory;
@@ -63,9 +64,10 @@ class LineItemDiscountsBuilder extends AbstractApiRequestParamsBuilder
         $discountLeft = $discountAmount;
         $qtyOrdered = $salesOrderItem->getQtyOrdered() ? (int) $salesOrderItem->getQtyOrdered() : 0;
 
-        if ($discountAmount && $salesOrderItem->getAppliedRuleIds()) {
+        if (($discountAmount || $this->isBundle($salesOrderItem))
+            && $salesOrderItem->getAppliedRuleIds()) {
             $ruleIds = explode(',', $salesOrderItem->getAppliedRuleIds());
-            
+
             foreach ($ruleIds as $ruleId) {
                 $discount = $this->buildRuleDiscount(
                     (int)$ruleId,
@@ -73,12 +75,21 @@ class LineItemDiscountsBuilder extends AbstractApiRequestParamsBuilder
                 );
 
                 if (!empty($discount)) {
+                    if ($this->isBundle($salesOrderItem)) {
+                        // Use zero discount for Bundles because we don't know actual discount amount for every rule
+                        $discount['discountAmount'] = 0;
+                    }
+
                     $discounts[] = $discount;
                     if (isset($discount['discountAmount'])) {
                         $discountLeft -= $qtyOrdered * $discount['discountAmount'];
                     }
                 }
             }
+        }
+
+        if ($this->isBundle($salesOrderItem)) {
+            return $discounts;
         }
 
         if (round($discountLeft,2) > 0.02) {
@@ -210,5 +221,44 @@ class LineItemDiscountsBuilder extends AbstractApiRequestParamsBuilder
         }
 
         return $newDiscounts;
+    }
+
+    /**
+     * Check if product is Bundle
+     *
+     * @param SalesOrderItemInterface $salesOrderItem
+     * @return bool
+     */
+    private function isBundle(SalesOrderItemInterface $salesOrderItem): bool
+    {
+        return $salesOrderItem->getProductType() === BundleProductType::TYPE_CODE;
+    }
+
+    /**
+     * Build discounts for Bundle products
+     *
+     * @param array $lineItem
+     * @return array
+     */
+    public function buildBundleDiscount(array $lineItem): array
+    {
+        $overallDiscount = $this->discountFactory->create();
+
+        $overallDiscount->setTitle(DiscountInterface::BUNDLE_DISCOUNT_TITLE);
+        $overallDiscount->setDescriptor(DiscountInterface::BUNDLE_DISCOUNT_DESCRIPTOR);
+
+        $amount = 0;
+        foreach ($lineItem['bundledProducts'] as $bundledProduct) {
+            foreach ($bundledProduct['discounts'] as $discount) {
+                $amount += $discount['discountAmount'] * $bundledProduct['quantity'];
+            }
+        }
+
+        $overallDiscount->setDiscountAmount($amount);
+
+        return array_merge(
+            [$this->snakeToCamel($overallDiscount->toArray())],
+            $lineItem['discounts']
+        );
     }
 }
