@@ -114,6 +114,7 @@ class TaxesBuilder extends AbstractApiRequestParamsBuilder
                 if (!isset($taxes[$tax['title']])) {
                     // Add first record for current tax
                     $taxes[$tax['title']] = $tax;
+                    $taxes[$tax['title']]['taxAmount'] *= $bundledProduct['quantity'];
                 } else {
                     // Add tax amount to the existing record
                     $taxes[$tax['title']]['taxAmount'] += $tax['taxAmount'] * $bundledProduct['quantity'];
