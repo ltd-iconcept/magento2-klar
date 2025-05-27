@@ -114,7 +114,7 @@ class LineItemsBuilder extends AbstractApiRequestParamsBuilder
             );
             $lineItem->setTotalAmountBeforeTaxesAndDiscounts($totalBeforeTaxesAndDiscounts);
 
-            $totalAfterTaxesAndDiscounts = $this->calculateTotalAfterTaxesAndDiscounts($lineItem);
+            $totalAfterTaxesAndDiscounts = $this->calculateTotalAfterTaxesAndDiscounts($lineItem, $salesOrderItem);
             $lineItem->setTotalAmountAfterTaxesAndDiscounts($totalAfterTaxesAndDiscounts ?: 0.0);
 
             // We temporarily use the item ID as a key to easily locate the Bundle product and add its children
@@ -263,22 +263,32 @@ class LineItemsBuilder extends AbstractApiRequestParamsBuilder
      * Calculate line item total after taxes and discounts.
      *
      * @param LineItemInterface $lineItem
-     *
+     * @param SalesOrderItemInterface $salesOrderItem
      * @return float
      */
-    private function calculateTotalAfterTaxesAndDiscounts(LineItemInterface $lineItem): float
-    {
+    private function calculateTotalAfterTaxesAndDiscounts(
+        LineItemInterface $lineItem,
+        SalesOrderItemInterface $salesOrderItem
+    ): float {
         $taxAmount = 0;
         $discountAmount = 0;
         $quantity = $lineItem->getQuantity();
         $productGmv = $lineItem->getProductGmv() * $quantity;
 
         foreach ($lineItem->getTaxes() as $lineItemTax) {
-            $taxAmount += round($lineItemTax['taxAmount'] * $quantity, 2);
+            $taxAmount += $lineItemTax['taxAmount'] * $quantity;
         }
 
         foreach ($lineItem->getDiscounts() as $lineItemDiscount) {
             $discountAmount += $lineItemDiscount['discountAmount'] * $quantity;
+        }
+
+        $taxAmount = round($taxAmount, 2);
+        if (abs($salesOrderItem->getTaxAmount() - $taxAmount) > 0) {
+            // If calculated tax amount does not match tax amount from the order item, the latter takes preference.
+            // This fix covers edge case scenario when Magento may add extra cent to the order item's tax amount
+            // but we want all subtotals to match still
+            $taxAmount = $salesOrderItem->getTaxAmount();
         }
 
         return $productGmv - $taxAmount - $discountAmount;
