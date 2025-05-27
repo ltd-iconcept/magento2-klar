@@ -259,6 +259,6 @@ class LineItemsBuilder extends AbstractApiRequestParamsBuilder
             $taxAmount = $salesOrderItem->getTaxAmount();
         }
 
-        return $productGmv - $taxAmount - $discountAmount;
+        return $productGmv + $taxAmount - $discountAmount;
     }
 }
