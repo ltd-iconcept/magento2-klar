@@ -14,6 +14,7 @@ use ICT\Klar\Model\AbstractApiRequestParamsBuilder;
 use Magento\Framework\Intl\DateTimeFactory;
 use Magento\Sales\Api\Data\OrderItemInterface;
 use Magento\Sales\Model\ResourceModel\Order\Tax\Item as TaxItemResource;
+use Magento\Tax\Model\Config;
 
 class TaxesBuilder extends AbstractApiRequestParamsBuilder
 {
@@ -23,6 +24,7 @@ class TaxesBuilder extends AbstractApiRequestParamsBuilder
     private TaxItemResource $taxItemResource;
     private TaxInterfaceFactory $taxFactory;
     private DiscountServiceInterface $discountService;
+    private Config $taxConfig;
 
     /**
      * TaxesBuilder constructor.
@@ -31,17 +33,20 @@ class TaxesBuilder extends AbstractApiRequestParamsBuilder
      * @param TaxItemResource $taxItemResource
      * @param TaxInterfaceFactory $taxFactory
      * @param DiscountServiceInterface $discountService
+     * @param Config $taxConfig
      */
     public function __construct(
         DateTimeFactory $dateTimeFactory,
         TaxItemResource $taxItemResource,
         TaxInterfaceFactory $taxFactory,
-        DiscountServiceInterface $discountService
+        DiscountServiceInterface $discountService,
+        Config $taxConfig
     ) {
         parent::__construct($dateTimeFactory);
         $this->taxItemResource = $taxItemResource;
         $this->taxFactory = $taxFactory;
         $this->discountService = $discountService;
+        $this->taxConfig = $taxConfig;
     }
 
     /**
@@ -73,9 +78,14 @@ class TaxesBuilder extends AbstractApiRequestParamsBuilder
                 }
 
                 $qty = $salesOrderItem->getQtyOrdered() ? $salesOrderItem->getQtyOrdered() : 1;
-                $itemPrice = (float)$salesOrderItem->getPriceInclTax()
-                                - ($this->discountService->getDiscountAmountFromOrderItem($salesOrderItem) / $qty);
-                $taxAmount = $itemPrice - ($itemPrice / (1+ $taxRate));
+
+                // Get taxable item price depending on "Apply Customer Tax" config state
+                $itemPrice = (float)$salesOrderItem->getPrice();
+                if ($this->taxConfig->applyTaxAfterDiscount()) {
+                    $itemPrice -= ($this->discountService->getDiscountAmountFromOrderItem($salesOrderItem) / $qty);
+                }
+
+                $taxAmount = $itemPrice * $taxRate;
             } else {
                 $taxAmount = (float)$taxItem['real_amount'];
             }
