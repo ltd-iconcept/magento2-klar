@@ -27,6 +27,8 @@ interface DiscountInterface
     public const SPECIAL_PRICE_DISCOUNT_DESCRIPTOR = 'Price Reduction';
     public const OTHER_DISCOUNT_TITLE = 'Other Discount';
     public const OTHER_DISCOUNT_DESCRIPTOR = 'Other Discount';
+    public const BUNDLE_DISCOUNT_TITLE = 'Bundle Discount';
+    public const BUNDLE_DISCOUNT_DESCRIPTOR = 'Bundle Discount';
 
     /**
      * Getter for Title.

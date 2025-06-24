@@ -11,6 +11,7 @@ use ICT\Klar\Api\Data\LineItemInterface;
 use ICT\Klar\Api\Data\LineItemInterfaceFactory;
 use ICT\Klar\Helper\Config;
 use ICT\Klar\Model\AbstractApiRequestParamsBuilder;
+use Magento\Bundle\Model\Product\Type as BundleProductType;
 use Magento\Catalog\Api\CategoryRepositoryInterface;
 use Magento\Catalog\Model\Product;
 use Magento\Framework\Exception\NoSuchEntityException;
@@ -64,9 +65,12 @@ class LineItemsBuilder extends AbstractApiRequestParamsBuilder
         $lineItems = [];
 
         foreach ($salesOrder->getItems() as $salesOrderItem) {
-            if ($salesOrderItem->getParentItemId()) {
+            // Skip children of non-Bundle products
+            $parent = $salesOrderItem->getParentItem();
+            if ($parent && $parent->getProductType() !== BundleProductType::TYPE_CODE) {
                 continue;
             }
+
             $product = $salesOrderItem->getProduct();
             $productVariant = $this->getProductVariant($salesOrderItem);
             $productBrand = false;
@@ -113,10 +117,38 @@ class LineItemsBuilder extends AbstractApiRequestParamsBuilder
             $totalAfterTaxesAndDiscounts = $this->calculateTotalAfterTaxesAndDiscounts($lineItem);
             $lineItem->setTotalAmountAfterTaxesAndDiscounts($totalAfterTaxesAndDiscounts ?: 0.0);
 
-            $lineItems[] = $this->snakeToCamel($lineItem->toArray());
+            // We temporarily use the item ID as a key to easily locate the Bundle product and add its children
+            if ($parent) {
+                // At this point parent product is Bundle
+                $lineItems[$parent->getItemId()]['bundledProducts'][] = $this->snakeToCamel($lineItem->toArray());
+            } else {
+                $lineItems[$salesOrderItem->getItemId()] = $this->snakeToCamel($lineItem->toArray());
+            }
         }
 
-        return $lineItems;
+        // Loop line items again to fill missing info for the Bundle product's children
+        foreach ($lineItems as &$lineItem) {
+            if (isset($lineItem['bundledProducts'])) {
+                $lineItem['discounts'] = $this->discountsBuilder->buildBundleDiscount($lineItem);
+                $lineItem['taxes'] = $this->taxesBuilder->buildBundleTaxes($lineItem);
+
+                $productShippingWeightInGrams = 0.0;
+                $totalAmountBeforeTaxesAndDiscounts = 0.0;
+                $totalAmountAfterTaxesAndDiscounts = 0.0;
+                foreach ($lineItem['bundledProducts'] as $bundledProduct) {
+                    $productShippingWeightInGrams += $bundledProduct['productShippingWeightInGrams'];
+                    $totalAmountBeforeTaxesAndDiscounts += $bundledProduct['totalAmountBeforeTaxesAndDiscounts'];
+                    $totalAmountAfterTaxesAndDiscounts += $bundledProduct['totalAmountAfterTaxesAndDiscounts'];
+                }
+
+                $lineItem['productShippingWeightInGrams'] = $productShippingWeightInGrams;
+                $lineItem['totalAmountBeforeTaxesAndDiscounts'] = $totalAmountBeforeTaxesAndDiscounts;
+                $lineItem['totalAmountAfterTaxesAndDiscounts'] = $totalAmountAfterTaxesAndDiscounts;
+            }
+        }
+
+        // We clear the keys here because we no longer need them
+        return array_values($lineItems);
     }
 
     /**
