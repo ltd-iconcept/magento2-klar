@@ -149,12 +149,6 @@ Releases < 1.0.17 please use this API Version:
    12.2022
 ```
 
-Releases >= 1.0.17 please use this API Version: 
-
-```
-  07.2025
-```
-
 We introduced the `bundledProducts` attribute for `lineItems` with the above version and bundledProducts are only possible since 1.0.17. 
 
 #### API Token
