@@ -250,7 +250,7 @@ class LineItemDiscountsBuilder extends AbstractApiRequestParamsBuilder
         $amount = 0;
         foreach ($lineItem['bundledProducts'] as $bundledProduct) {
             foreach ($bundledProduct['discounts'] as $discount) {
-                $amount += $discount['discountAmount'] * $bundledProduct['quantity'];
+                $amount += $discount['discountAmount'];
             }
         }
 
