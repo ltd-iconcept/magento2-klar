@@ -1,5 +1,22 @@
 # Magento 2 Klar Integration Module
 
+---
+
+> ## :warning: THIS REPOSITORY IS NO LONGER MAINTAINED :warning:
+>
+> **This module (`ICT_Klar` / `ltd-iconcept/magento2-klar`) has been deprecated and is no longer receiving updates, bug fixes, or security patches.**
+>
+> The Klar Magento 2 integration has moved to a new home under a new namespace:
+>
+> ### **:arrow_right: [placeholder-tech/klar-magento-2](https://github.com/placeholder-tech/klar-magento-2)**
+>
+> Please migrate to the new module to receive the latest features and updates.
+> A step-by-step migration guide is available in the new repository: **[Migration Guide](https://github.com/placeholder-tech/klar-magento-2/blob/main/MIGRATION.md)**
+>
+> Your existing configuration, database tables, and queue settings are fully preserved during migration.
+
+---
+
 ## Overview
 
 The Magento 2 Klar integration module is a powerful tool designed to streamline the process of integrating the Klar
